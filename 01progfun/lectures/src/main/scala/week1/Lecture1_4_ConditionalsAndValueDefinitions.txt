@@ -1,0 +1,13 @@
+Rewrite Rules for Booleans:
+!true       --> false
+!false      --> true
+true && e   --> e
+false && e  --> false
+true || e   --> true
+false || e  --> false
+
+Using rewrite rules for booleans, write out the rules for the following:
+if (b) e1 else e2
+
+if (true) e1 else e2    --> e1
+if (false) e1 else e2   --> e2
