@@ -1,0 +1,14 @@
+Evaluation Strategies and Termination:
+
+def constOne(x: Int, y: => Int) = 1
+
+Trace the following:
+a) constOne(1 + 2, loop)
+1) constOne(3, loop)
+2) 1
+
+---------------------------
+
+b) constOne(loop, 1 + 2)
+1) constOne(loop, 1 + 2)
+2...) constOne(loop, 1 + 2)
