@@ -34,5 +34,9 @@ object Main {
   /**
     * Exercise 3
     */
-  def countChange(money: Int, coins: List[Int]): Int = ???
+  def countChange(money: Int, coins: List[Int]): Int = {
+    if (money < 0 || coins.isEmpty) 0
+    else if (money == 0) 1
+    else countChange(money, coins.tail) + countChange(money - coins.head, coins)
+  }
 }
