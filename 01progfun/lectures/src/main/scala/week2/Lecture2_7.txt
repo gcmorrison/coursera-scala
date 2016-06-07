@@ -1,0 +1,5 @@
+Provide a fully parenthized version of
+a + b ^? c ?^ d less a ==> b | c
+
+Result:
+((a + b) ^? (c ?^ d)) less ((a ==> b) | c)
