@@ -41,10 +41,24 @@ class HuffmanSuite extends FunSuite {
     assert(makeOrderedLeafList(List(('e', 2), ('t', 1), ('x', 3))) === List(Leaf('t',1), Leaf('e',2), Leaf('x',3)))
   }
 
-
   test("combine of some leaf list") {
     val leaflist = List(Leaf('e', 1), Leaf('t', 2), Leaf('x', 4))
     assert(combine(leaflist) === List(Fork(Leaf('e',1),Leaf('t',2),List('e', 't'),3), Leaf('x',4)))
+  }
+
+  // This test was taken from the Coursera Forums, to point out why I lost some efficiency points.  It currently fails though
+  test("combine of some leaf list - additional") {
+    assert(combine(List(Leaf('e', 1), Leaf('t', 2))) === List(Fork(Leaf('e', 1), Leaf('t', 2), List('e', 't'), 3)))
+
+    val leaflist = List(Leaf('e', 1), Leaf('t', 2), Leaf('x', 4))
+    assert (combine(leaflist) === List(Fork(Leaf('e', 1), Leaf('t', 2), List('e', 't'), 3), Leaf('x', 4)))
+
+    val leaflist2 = List(Leaf('e', 7), Leaf('t', 8), Leaf('x', 9))
+    assert (combine(leaflist2) === List(Leaf('x', 9), Fork(Leaf('e', 7), Leaf('t', 8), List('e', 't'), 15)))
+
+    assert ((combine(combine(leaflist))) === List(Fork(Fork(Leaf('e', 1), Leaf('t', 2), List('e', 't'), 3), Leaf('x', 4), List('e', 't', 'x'), 7)))
+
+    assert (singleton(((combine(combine(leaflist))))) === true)
   }
 
   test("until") {

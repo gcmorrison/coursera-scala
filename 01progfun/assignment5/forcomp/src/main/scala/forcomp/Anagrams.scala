@@ -153,30 +153,33 @@ object Anagrams {
    *
    *  Note: There is only one anagram of an empty sentence.
    */
-  def sentenceAnagrams(sentence: Sentence): List[Sentence] = sentence match {
-    // TODO
+  def sentenceAnagrams(sentence: Sentence): List[Any] = sentence match {
     case Nil => List(Nil)
-    case s => List(Nil)
+    case s => findAllAnagrams(sentenceOccurrences(sentence))
   }
-//  def sentenceAnagrams(sentence: Sentence): List[Any] = sentence match {
-//    case Nil => List(Nil)
-//    case s => {
-//      def buildAnagrams(words1: Sentence, words2: Sentence): List[Sentence] = {
-//          words1.foldLeft[List[Sentence]](Nil)((acc, word) => (for (yWord <- words2) yield word :: List(yWord)) ++ acc)
-//      }
-//      val occurrences = sentenceOccurrences(s)
-//      for {
-//        subset <- combinations(occurrences)
-//        remainder <- combinations(subtract(occurrences, subset))
-//      } yield subset match {
-//        case Nil => Nil
-//        case x => {
-//          val subsetAnagrams = dictionaryByOccurrences.getOrElse(x, Nil)
-//          val remainderAnagrams = dictionaryByOccurrences.getOrElse(remainder, Nil)
-//
-//          if (subsetAnagrams.isEmpty || remainderAnagrams.isEmpty) Nil else buildAnagrams(subsetAnagrams, remainderAnagrams)
-//        }
-//      }
-//    }
-//  }
+
+  /**
+    * Given an Occurrences object, find all anagrams of all subsets of the occurrence.  Only anagrams that take up the
+    * entire Occurrences are valid.  If there's some unmatched occurrences left, then it's not valid.
+    *
+    * @param occurrences
+    * @return
+    */
+  private def findAllAnagrams(occurrences: Occurrences): List[Sentence] = {
+    (for {
+      subset <- combinations(occurrences)
+    } yield {
+      val left = dictionaryByOccurrences.getOrElse(subset, Nil)
+      if (left.isEmpty) Nil else {
+        val remainder = subtract(occurrences, subset)
+        if (remainder.isEmpty) for (word <- left) yield List(word)
+        else {
+          val rest = findAllAnagrams(remainder)
+          if (rest.nonEmpty)
+            left.foldLeft[List[Sentence]](Nil)((acc, word) => (for (remainingWord <- rest) yield word :: remainingWord) ++ acc)
+          else Nil
+        }
+      }
+    }).flatten
+  }
 }
