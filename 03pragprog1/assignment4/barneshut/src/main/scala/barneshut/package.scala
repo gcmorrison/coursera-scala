@@ -56,7 +56,7 @@ package object barneshut {
   ) extends Quad {
     val centerX: Float = nw.centerX + (nw.size / 2)
     val centerY: Float = nw.centerY + (nw.size / 2)
-    val size: Float = nw.size + ne.size + sw.size + se.size
+    val size: Float = nw.size + ne.size
     val mass: Float = nw.mass + ne.mass + sw.mass + se.mass
     val massX: Float = if (mass == 0) centerX else (nw.massX * nw.mass + ne.massX * ne.mass + sw.massX * sw.mass + se.massX * se.mass) / mass
     val massY: Float = if (mass == 0) centerY else (nw.massY * nw.mass + ne.massY * ne.mass + sw.massY * sw.mass + se.massY * se.mass) / mass
@@ -91,7 +91,7 @@ package object barneshut {
           Empty(centerX - centerOffset, centerY + centerOffset, size / 2), // sw
           Empty(centerX + centerOffset, centerY + centerOffset, size / 2) // se
         )
-        bodies.foldLeft(result)((acc, b) => acc.insert(b))
+        (bodies :+ b).foldLeft(result)((acc, b) => acc.insert(b))
       }
     }
   }
