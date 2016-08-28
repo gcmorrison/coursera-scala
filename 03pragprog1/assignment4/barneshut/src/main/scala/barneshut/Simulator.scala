@@ -44,7 +44,7 @@ class Simulator(val taskSupport: TaskSupport, val timeStats: TimeStatistics) {
   def updateBodies(bodies: Seq[Body], quad: Quad): Seq[Body] = timeStats.timed("update") {
     val parBodies = bodies.par
     parBodies.tasksupport = taskSupport
-    parBodies.foldLeft(Nil: Seq[Body])((acc, b) => b.updated(quad) +: acc)
+    parBodies.foldRight(Nil: Seq[Body])((b, acc) => b.updated(quad) +: acc)
   }
 
   def eliminateOutliers(bodies: Seq[Body], sectorMatrix: SectorMatrix, quad: Quad): Seq[Body] = timeStats.timed("eliminate") {

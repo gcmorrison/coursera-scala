@@ -58,41 +58,40 @@ package object barneshut {
     val centerY: Float = nw.centerY + (nw.size / 2)
     val size: Float = nw.size + ne.size + sw.size + se.size
     val mass: Float = nw.mass + ne.mass + sw.mass + se.mass
-    val massX: Float = if (size == 0) centerX else (nw.massX * nw.mass + ne.massX * ne.mass + sw.massX * sw.mass + se.massX * se.mass) / mass
-    val massY: Float = if (size == 0) centerY else (nw.massY * nw.mass + ne.massY * ne.mass + sw.massY * sw.mass + se.massY * se.mass) / mass
+    val massX: Float = if (mass == 0) centerX else (nw.massX * nw.mass + ne.massX * ne.mass + sw.massX * sw.mass + se.massX * se.mass) / mass
+    val massY: Float = if (mass == 0) centerY else (nw.massY * nw.mass + ne.massY * ne.mass + sw.massY * sw.mass + se.massY * se.mass) / mass
     val total: Int = nw.total + ne.total + sw.total + se.total
 
     def insert(b: Body): Fork = {
-      if (bodyIsInQuad(nw, b)) Fork(nw.insert(b), ne, sw, se)
-      else if (bodyIsInQuad(ne, b)) Fork(nw, ne.insert(b), sw, se)
-      else if (bodyIsInQuad(sw, b)) Fork(nw, ne, sw.insert(b), se)
-      else if (bodyIsInQuad(se, b)) Fork(nw, ne, sw, se.insert(b))
-      else this
-    }
+      val distances = List(distance(nw.centerX, nw.centerY, b.x, b.y),
+        distance(ne.centerX, ne.centerY, b.x, b.y),
+        distance(sw.centerX, sw.centerY, b.x, b.y),
+        distance(se.centerX, se.centerY, b.x, b.y))
 
-    private def bodyIsInQuad(quad: Quad, body: Body) = {
-      quad.centerX - quad.size / 2 < body.x && body.x < quad.centerX + quad.size / 2 &&
-        quad.centerY - quad.size / 2 < body.y && body.y < quad.centerY + quad.size / 2
+      val shortest = distances.min
+      if (shortest == distances(0)) Fork(nw.insert(b), ne, sw, se)
+      else if (shortest == distances(1)) Fork(nw, ne.insert(b), sw, se)
+      else if (shortest == distances(2)) Fork(nw, ne, sw.insert(b), se)
+      else Fork(nw, ne, sw, se.insert(b))
     }
   }
 
   case class Leaf(centerX: Float, centerY: Float, size: Float, bodies: Seq[Body])
   extends Quad {
     val mass = bodies.foldLeft(0f)(_ + _.mass)
-    val massX = bodies.foldLeft(0f)((x, b) => x + (b.x * b.mass)) / mass
-    val massY = bodies.foldLeft(0f)((y, b) => y + (b.y * b.mass)) / mass
+    val massX = if (mass == 0) centerX else bodies.foldLeft(0f)((x, b) => x + (b.x * b.mass)) / mass
+    val massY = if (mass == 0) centerY else bodies.foldLeft(0f)((y, b) => y + (b.y * b.mass)) / mass
     val total: Int = bodies.size
     def insert(b: Body): Quad = {
-      if (size < minimumSize) Leaf(centerX, centerY, size, b +: bodies)
+      if (size <= minimumSize) Leaf(centerX, centerY, size, bodies :+ b)
       else {
         val centerOffset = size / 4
-        var result = Fork(Empty(centerX - centerOffset, centerY - centerOffset, size / 2), // nw
+        val result = Fork(Empty(centerX - centerOffset, centerY - centerOffset, size / 2), // nw
           Empty(centerX + centerOffset, centerY - centerOffset, size / 2), //ne
           Empty(centerX - centerOffset, centerY + centerOffset, size / 2), // sw
           Empty(centerX + centerOffset, centerY + centerOffset, size / 2) // se
         )
-        bodies.foreach[Unit](b => result = result.insert(b))
-        result
+        bodies.foldLeft(result)((acc, b) => acc.insert(b))
       }
     }
   }
@@ -170,7 +169,6 @@ package object barneshut {
 
       new Body(mass, nx, ny, nxspeed, nyspeed)
     }
-
   }
 
   val SECTOR_PRECISION = 8
@@ -181,35 +179,21 @@ package object barneshut {
     for (i <- 0 until matrix.length) matrix(i) = new ConcBuffer
 
     def +=(b: Body): SectorMatrix = {
-      if (boundaries.minX < b.x && b.x < boundaries.maxX && boundaries.minY < b.y && b.y < boundaries.maxY) {
-        // Body is within the boundaries of the SectorMatrix
-        var (x, y) = (0, 0)
-        var found = false
-        while (x < sectorPrecision && y < sectorPrecision && !found) {
-          found = if (x * sectorSize < b.x && b.x < (x + 1) * sectorSize && y * sectorSize < b.y && b.y < (y + 1) * sectorSize) {
-            matrix(y * sectorPrecision + x) += b
-            true
-          } else false
-          x = (x + 1) % sectorPrecision
-          y = if (x == 0) y + 1 else y
-        }
-      } else {
-        // Body is outside the SectorMatrix.  Find closest body and add there
-        var closestIndex = -1
-        var closestDistance = Float.MaxValue
-        var (x, y) = (0, 0)
-        while (x < sectorPrecision && y < sectorPrecision) {
-          val centerX = x * sectorSize + (sectorSize / 2)
-          val centerY = y * sectorSize + (sectorSize / 2)
-          val currentDistance = distance(centerX, centerY, b.x, b.y)
-          closestIndex = if (currentDistance < closestDistance) {
-            closestDistance = currentDistance
-            (y * sectorPrecision) + x
-          } else closestIndex
-          x = (x + 1) % sectorPrecision
-          y = if (x == 0) y + 1 else y
+      var (closestX, closestY) = (0, 0)
+      var closestDistance = Float.MaxValue
+      for {
+        y <- 0 until sectorPrecision
+        x <- 0 until sectorPrecision
+      } {
+        val centerX = x * sectorSize + (sectorSize / 2)
+        val centerY = y * sectorSize + (sectorSize / 2)
+        val currentDistance = distance(centerX, centerY, b.x, b.y)
+        if (currentDistance < closestDistance) {
+          closestX = x; closestY = y
+          closestDistance = currentDistance
         }
       }
+      this(closestX, closestY) += b
       this
     }
 
